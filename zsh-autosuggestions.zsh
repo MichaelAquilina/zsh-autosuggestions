@@ -345,24 +345,12 @@ zle -N autosuggest-execute _zsh_autosuggest_widget_execute
 
 # Delegate to the selected strategy to determine a suggestion
 _zsh_autosuggest_suggestion() {
-	local prefix="$1"
+	local prefix="${(b)1}" # Escape special chars in prefix
 	local strategy_function="_zsh_autosuggest_strategy_$ZSH_AUTOSUGGEST_STRATEGY"
 
 	if [ -n "$functions[$strategy_function]" ]; then
 		echo -E "$($strategy_function "$prefix")"
 	fi
-}
-
-_zsh_autosuggest_escape_command() {
-	setopt localoptions EXTENDED_GLOB
-
-	# Escape special chars in the string (requires EXTENDED_GLOB)
-	echo -E "${1//(#m)[\\()\[\]|*?]/\\$MATCH}"
-}
-
-# Get the previously executed command
-_zsh_autosuggest_prev_command() {
-	echo -E "${history[$((HISTCMD-1))]}"
 }
 
 #--------------------------------------------------------------------#
@@ -373,7 +361,7 @@ _zsh_autosuggest_prev_command() {
 #
 
 _zsh_autosuggest_strategy_default() {
-	local prefix="$(_zsh_autosuggest_escape_command "$1")"
+	local prefix="$1"
 
 	# Get the keys of the history items that match
 	local -a histkeys
@@ -402,7 +390,7 @@ _zsh_autosuggest_strategy_default() {
 #
 
 _zsh_autosuggest_strategy_match_prev_cmd() {
-	local prefix="$(_zsh_autosuggest_escape_command "$1")"
+	local prefix="$1"
 
 	# Get all history event numbers that correspond to history
 	# entries that match pattern $prefix*
@@ -413,8 +401,7 @@ _zsh_autosuggest_strategy_match_prev_cmd() {
 	local histkey="${history_match_keys[1]}"
 
 	# Get the previously executed command
-	local prev_cmd="$(_zsh_autosuggest_prev_command)"
-	prev_cmd="$(_zsh_autosuggest_escape_command "$prev_cmd")"
+	local prev_cmd="${(b)${history[$((HISTCMD-1))]}}"
 
 	# Iterate up to the first 200 history event numbers that match $prefix
 	for key in "${(@)history_match_keys[1,200]}"; do
